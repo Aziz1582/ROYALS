@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Dashboard</title>
+  <!-- Link to external stylesheet -->
+  <link rel="stylesheet" href="stylestudent.css" />
+  <style>
+    /* Simple styling for PDF viewer */
+    #pdfViewer {
+      margin-top: 20px;
+      width: 100%;
+      height: 600px;
+      border: 1px solid #ccc;
+      display: none;
+    }
+    #pdfList a {
+      display: block;
+      margin: 8px 0;
+      color: #004080;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: 'Arimo', sans-serif;
+      text-transform: uppercase;
+      text-decoration: underline;
+    }
+    #pdfList a:hover {
+      color: #42966e;
+    }
+  </style>
+</head>
+<body>
+
+<header id="top">
+  <h1 class="logo">Student Dashboard</h1>
+  <nav>
+    <ul>
+      <li class="dropdown">
+        <button class="dropbtn">Menu ▼</button>
+        <div class="dropdown-content">
+          <a href="#tests-exams">Tests/Exams</a>
+          <a href="#results">Results</a>
+          <a href="#class-schedule">Class Schedule</a>
+        </div>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+
+  <section id="tests-exams">
+    <h2>Tests/Exams</h2>
+    <p>Select a subject below to view/download tests.</p>
+
+    <label for="subjectSelect">Choose Subject:</label>
+    <select id="subjectSelect" name="subjectSelect" required>
+      <option value="" disabled selected>Select a subject</option>
+      <option value="Maths">Maths</option>
+      <option value="ScienceDoubleAward">Science Double Award</option>
+      <option value="Languages">Languages</option>
+      <option value="Geography">Geography</option>
+      <option value="SocialStudies">Social Studies</option>
+    </select>
+
+    <div id="pdfList" style="margin-top: 20px;"></div>
+
+    <iframe id="pdfViewer" src="" frameborder="0"></iframe>
+  </section>
+
+  <!-- ... rest of your sections unchanged ... -->
+
+  <section id="results">
+    <h2>Results</h2>
+    <p>Below are your results for the tests taken. Results are updated by your tutor after marking.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Test Name</th>
+          <th>Date Taken</th>
+          <th>Score</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Placeholder rows -->
+        <tr>
+          <td>Math Test</td>
+          <td>2025-07-15</td>
+          <td>85%</td>
+          <td>Good job! Keep practicing.</td>
+        </tr>
+        <tr>
+          <td>English Test</td>
+          <td>2025-07-20</td>
+          <td>90%</td>
+          <td>Excellent work.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="class-schedule">
+    <h2>Class Schedule</h2>
+    <p>This is your weekly timetable. It is updated regularly by the tuition administrator.</p>
+    <table class="schedule-table">
+      <thead>
+        <tr>
+          <th>Time / Day</th>
+          <th>Monday</th>
+          <th>Tuesday</th>
+          <th>Wednesday</th>
+          <th>Thursday</th>
+          <th>Friday</th>
+          <th>Saturday</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>9:00am - 10:30am</td>
+          <td>Math</td>
+          <td>English</td>
+          <td>Science</td>
+          <td>Math</td>
+          <td>English</td>
+          <td>Off</td>
+        </tr>
+        <tr>
+          <td>10:45am - 12:15pm</td>
+          <td>Science</td>
+          <td>Math</td>
+          <td>English</td>
+          <td>Science</td>
+          <td>Math</td>
+          <td>Off</td>
+        </tr>
+        <tr>
+          <td>1:30pm - 3:00pm</td>
+          <td>English</td>
+          <td>Science</td>
+          <td>Math</td>
+          <td>English</td>
+          <td>Science</td>
+          <td>Off</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+<script src="student-dashboard.js"></script>
+
+<script>
+  // PDFs for each subject
+  const pdfData = {
+    Maths: [
+      { name: "Math Test 1", file: "tests/Maths/math_test_1.pdf" },
+      { name: "Math Test 2", file: "tests/Maths/math_test_2.pdf" }
+    ],
+    ScienceDoubleAward: [
+      { name: "Science DA Test 1", file: "tests/ScienceDoubleAward/science_da_test_1.pdf" },
+      { name: "Science DA Test 2", file: "tests/ScienceDoubleAward/science_da_test_2.pdf" }
+    ],
+    Languages: [
+      { name: "English Test 1", file: "tests/Languages/english_test_1.pdf" },
+      { name: "French Test 1", file: "tests/Languages/french_test_1.pdf" }
+    ],
+    Geography: [
+      { name: "Geography Test 1", file: "tests/Geography/geography_test_1.pdf" }
+    ],
+    SocialStudies: [
+      { name: "Social Studies Test 1", file: "tests/SocialStudies/social_studies_test_1.pdf" }
+    ]
+  };
+
+  const subjectSelect = document.getElementById('subjectSelect');
+  const pdfList = document.getElementById('pdfList');
+  const pdfViewer = document.getElementById('pdfViewer');
+
+  subjectSelect.addEventListener('change', () => {
+    const selectedSubject = subjectSelect.value;
+    pdfViewer.style.display = 'none';
+    pdfViewer.src = '';
+    pdfList.innerHTML = '';
+
+    if (selectedSubject && pdfData[selectedSubject]) {
+      pdfData[selectedSubject].forEach(pdf => {
+        const link = document.createElement('a');
+        link.textContent = pdf.name;
+        link.href = pdf.file;
+        link.target = '_blank';  // open in new tab for download/view
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          pdfViewer.src = pdf.file;
+          pdfViewer.style.display = 'block';
+          // Optionally scroll into view
+          pdfViewer.scrollIntoView({behavior: 'smooth'});
+        });
+        pdfList.appendChild(link);
+      });
+    }
+  });
+</script>
+
+</body>
+</html>

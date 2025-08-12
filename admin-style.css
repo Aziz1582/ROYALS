@@ -1,0 +1,108 @@
+/* admin-style.css */
+
+body {
+  font-family: 'Arimo', sans-serif;
+  background-image: url('');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  color: #222;
+  margin: 0;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  font-weight: 700;
+  color: #004080;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+button, input[type="submit"] {
+  background-color: #004080;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-family: 'Arimo', sans-serif;
+  transition: background-color 0.3s ease;
+}
+
+button:hover, input[type="submit"]:hover {
+  background-color: #0a62b1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 25px;
+  font-size: 1rem;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  background-color: #f0f4f8;
+  font-weight: 700;
+}
+
+input[type="text"], input[type="email"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus, input[type="email"]:focus {
+  border-color: #004080;
+  outline: none;
+}
+
+input[type="text"].score {
+  width: 70px;
+}
+
+#signOutBtn {
+  float: right;
+  background-color: #c0392b;
+  margin-bottom: 20px;
+}
+
+#signOutBtn:hover {
+  background-color: #a93226;
+}
+
+/* Responsive */
+@media (max-width: 650px) {
+  body {
+    padding: 15px;
+  }
+  .container {
+    padding: 20px;
+  }
+  table {
+    font-size: 0.9rem;
+  }
+  button {
+    padding: 10px 16px;
+  }
+}

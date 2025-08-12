@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="admin-style.css" />
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+    h1 { text-align: center; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
+    input[type="text"], input[type="email"], input[type="number"] { width: 100%; box-sizing: border-box; }
+    input.score { width: 60px; }
+    button { cursor: pointer; }
+    #signOutBtn {
+      margin-bottom: 20px;
+      background-color: #c0392b;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      float: right;
+    }
+    #statusMessage {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Welcome, Admin</h1>
+<button id="signOutBtn" title="Sign out">Sign Out</button>
+
+<h2>Add / Update Student Result</h2>
+<form id="resultForm">
+  <label>
+    Student Email:<br />
+    <input type="email" id="studentEmail" placeholder="student@example.com" required />
+  </label><br/><br/>
+  
+  <label>
+    Subject/Test Name:<br />
+    <input type="text" id="testName" placeholder="Math Test" required />
+  </label><br/><br/>
+  
+  <label>
+    Score (%):<br />
+    <input type="number" id="score" min="0" max="100" placeholder="85" required />
+  </label><br/><br/>
+  
+  <label>
+    Remarks:<br />
+    <input type="text" id="remarks" placeholder="Good job!" />
+  </label><br/><br/>
+  
+  <button type="submit">Save Result</button>
+</form>
+
+<p id="statusMessage"></p>
+
+<hr/>
+
+<h2>All Students and Their Results</h2>
+<table id="studentsResultsTable" aria-label="Students and Results Table">
+  <thead>
+    <tr>
+      <th>Student Email</th>
+      <th>Test Name</th>
+      <th>Date Uploaded</th>
+      <th>Score (%)</th>
+      <th>Remarks</th>
+      <th>Save</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Results rows will be loaded here -->
+  </tbody>
+</table>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCYyyJcBgHf7Qq0YQLCfWXPHC0UqeoNc2U",
+    authDomain: "royals-f5351.firebaseapp.com",
+    projectId: "royals-f5351",
+    storageBucket: "royals-f5351.firebasestorage.app",
+    messagingSenderId: "564934364429",
+    appId: "1:564934364429:web:4a84ab9a6dfc3eb34cf444",
+    measurementId: "G-5X0NFVXY7D"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const form = document.getElementById('resultForm');
+  const statusMessage = document.getElementById('statusMessage');
+
+  // Ensure admin is logged in
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      alert('You must be signed in as admin to access this page.');
+      window.location.href = 'index.html';  // Redirect to login/homepage
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('studentEmail').value.trim().toLowerCase();
+    const testName = document.getElementById('testName').value.trim();
+    const score = document.getElementById('score').value.trim();
+    const remarks = document.getElementById('remarks').value.trim();
+
+    if (!email || !testName || score === '') {
+      statusMessage.textContent = 'Please fill in all required fields.';
+      statusMessage.style.color = 'red';
+      return;
+    }
+
+    if (Number(score) < 0 || Number(score) > 100) {
+      statusMessage.textContent = 'Score must be between 0 and 100.';
+      statusMessage.style.color = 'red';
+      return;
+    }
+
+    statusMessage.textContent = 'Saving result...';
+    statusMessage.style.color = 'black';
+
+    const docId = email + '_' + testName.replace(/\s+/g, '_');
+    const dateUploaded = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    try {
+      await db.collection('studentResults').doc(docId).set({
+        email,
+        testName,
+        dateUploaded,
+        score: Number(score),
+        remarks
+      });
+
+      statusMessage.textContent = 'Result saved successfully!';
+      statusMessage.style.color = 'green';
+
+      form.reset();
+      loadResultsTable();
+    } catch (error) {
+      statusMessage.textContent = 'Error saving result: ' + error.message;
+      statusMessage.style.color = 'red';
+    }
+  });
+
+  async function loadResultsTable() {
+    const tbody = document.querySelector('#studentsResultsTable tbody');
+    tbody.innerHTML = '';
+    try {
+      const snapshot = await db.collection('studentResults').orderBy('dateUploaded', 'desc').get();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const tr = document.createElement('tr');
+
+        // Email
+        const tdEmail = document.createElement('td');
+        tdEmail.textContent = data.email;
+        tr.appendChild(tdEmail);
+
+        // Test name
+        const tdTest = document.createElement('td');
+        tdTest.textContent = data.testName;
+        tr.appendChild(tdTest);
+
+        // Date uploaded
+        const tdDate = document.createElement('td');
+        tdDate.textContent = data.dateUploaded;
+        tr.appendChild(tdDate);
+
+        // Score input
+        const tdScore = document.createElement('td');
+        const inputScore = document.createElement('input');
+        inputScore.type = 'number';
+        inputScore.className = 'score';
+        inputScore.min = 0;
+        inputScore.max = 100;
+        inputScore.value = data.score || '';
+        tdScore.appendChild(inputScore);
+        tr.appendChild(tdScore);
+
+        // Remarks input
+        const tdRemarks = document.createElement('td');
+        const inputRemarks = document.createElement('input');
+        inputRemarks.type = 'text';
+        inputRemarks.value = data.remarks || '';
+        tdRemarks.appendChild(inputRemarks);
+        tr.appendChild(tdRemarks);
+
+        // Save button
+        const tdSave = document.createElement('td');
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', async () => {
+          const scoreVal = inputScore.value.trim();
+          if (scoreVal === '' || Number(scoreVal) < 0 || Number(scoreVal) > 100) {
+            alert('Score must be a number between 0 and 100.');
+            return;
+          }
+          try {
+            await db.collection('studentResults').doc(doc.id).update({
+              score: Number(scoreVal),
+              remarks: inputRemarks.value.trim()
+            });
+            alert('Saved successfully');
+          } catch (error) {
+            alert('Error saving: ' + error.message);
+          }
+        });
+        tdSave.appendChild(saveBtn);
+        tr.appendChild(tdSave);
+
+        tbody.appendChild(tr);
+      });
+    } catch (error) {
+      console.error('Error loading results:', error);
+    }
+  }
+
+  // Sign out button functionality
+  document.getElementById('signOutBtn').addEventListener('click', () => {
+    auth.signOut().then(() => {
+      alert('Signed out successfully.');
+      window.location.href = 'index.html';  // Adjust as needed
+    });
+  });
+
+  // Initial load of results
+  loadResultsTable();
+</script>
+
+</body>
+</html>

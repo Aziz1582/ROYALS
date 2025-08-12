@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin — Upload Results</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="stylestudent.css" />
+  <style>
+    body { padding: 24px; background:#f7f7f7; }
+    .card { background:#fff; padding:20px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); max-width:900px; margin: 12px auto; }
+    label { display:block; margin-top:12px; font-weight:700; }
+    input, select, textarea { width:100%; padding:10px; margin-top:6px; border-radius:6px; border:1px solid #ddd; }
+    button { margin-top:14px; padding:10px 14px; border-radius:8px; background:#5dae87; color:#fff; border:none; font-weight:700; cursor:pointer; }
+    .danger { background:#e05a4f; }
+    .small { font-size:0.9rem; color:#666; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Admin — Upload / Edit Student Results</h2>
+
+    <div id="authArea">
+      <p class="small">Sign in with admin account to manage results.</p>
+      <input id="email" type="email" placeholder="Admin email" />
+      <input id="password" type="password" placeholder="Password" />
+      <button id="signinBtn">Sign In</button>
+      <button id="signoutBtn" style="display:none" class="danger">Sign Out</button>
+      <p id="authMessage" class="small" style="color:red"></p>
+    </div>
+
+    <div id="adminUI" style="display:none">
+      <p class="small">Create or update a result. To update a specific document, you'll need its doc id (optional).</p>
+
+      <label>Student UID (required)</label>
+      <input id="studentId" placeholder="Paste student's Firebase Auth UID" />
+
+      <label>Student Name</label>
+      <input id="studentName" placeholder="Student name (for display)" />
+
+      <label>Subject</label>
+      <select id="subject">
+        <option>Maths</option>
+        <option>Science Double Award</option>
+        <option>Languages</option>
+        <option>Geography</option>
+        <option>Social Studies</option>
+      </select>
+
+      <label>Date</label>
+      <input id="date" type="date" />
+
+      <label>Score</label>
+      <input id="score" placeholder="e.g., 85% or 42/50" />
+
+      <label>Remarks</label>
+      <textarea id="remarks" rows="3"></textarea>
+
+      <label>Document ID to Edit (leave empty to create new)</label>
+      <input id="docId" placeholder="Optional: existing document id" />
+
+      <button id="saveResult">Save Result</button>
+      <p id="saveMessage" class="small"></p>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ---------- Put your firebaseConfig here (same as in index) ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyCYyyJcBgHf7Qq0YQLCfWXPHC0UqeoNc2U",
+      authDomain: "royals-f5351.firebaseapp.com",
+      projectId: "royals-f5351",
+      storageBucket: "royals-f5351.firebasestorage.app",
+      messagingSenderId: "564934364429",
+      appId: "1:564934364429:web:4a84ab9a6dfc3eb34cf444",
+      measurementId: "G-5X0NFVXY7D"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // UI elements
+    const signinBtn = document.getElementById('signinBtn');
+    const signoutBtn = document.getElementById('signoutBtn');
+    const authMessage = document.getElementById('authMessage');
+    const adminUI = document.getElementById('adminUI');
+
+    const studentIdEl = document.getElementById('studentId');
+    const studentNameEl = document.getElementById('studentName');
+    const subjectEl = document.getElementById('subject');
+    const dateEl = document.getElementById('date');
+    const scoreEl = document.getElementById('score');
+    const remarksEl = document.getElementById('remarks');
+    const docIdEl = document.getElementById('docId');
+    const saveBtn = document.getElementById('saveResult');
+    const saveMessage = document.getElementById('saveMessage');
+
+    // Sign in
+    signinBtn.addEventListener('click', () => {
+      const email = document.getElementById('email').value.trim();
+      const pw = document.getElementById('password').value.trim();
+      if (!email || !pw) { authMessage.textContent = 'Enter email & password'; return; }
+      auth.signInWithEmailAndPassword(email, pw)
+        .then(() => authMessage.textContent = '')
+        .catch(e => authMessage.textContent = e.message);
+    });
+
+    signoutBtn.addEventListener('click', () => {
+      auth.signOut();
+    });
+
+    // Auth state changes
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        adminUI.style.display = 'none';
+        signoutBtn.style.display = 'none';
+        signinBtn.style.display = 'inline-block';
+        authMessage.textContent = '';
+        return;
+      }
+
+      // check admin flag in users/{uid}
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const isAdmin = userDoc.exists && userDoc.data().isAdmin === true;
+        if (!isAdmin) {
+          authMessage.textContent = 'Account is not an admin.';
+          await auth.signOut();
+          return;
+        }
+        // admin confirmed
+        adminUI.style.display = 'block';
+        signoutBtn.style.display = 'inline-block';
+        signinBtn.style.display = 'none';
+        authMessage.textContent = `Signed in as ${user.email}`;
+      } catch (err) {
+        authMessage.textContent = 'Error checking admin status: ' + err.message;
+      }
+    });
+
+    // Save result: create or update
+    saveBtn.addEventListener('click', async () => {
+      saveMessage.textContent = '';
+      const studentId = studentIdEl.value.trim();
+      if (!studentId) { saveMessage.textContent = 'Student UID required'; return; }
+      const payload = {
+        studentId,
+        studentName: studentNameEl.value.trim() || null,
+        subject: subjectEl.value,
+        date: dateEl.value || new Date().toISOString().split('T')[0],
+        score: scoreEl.value.trim(),
+        remarks: remarksEl.value.trim(),
+        uploadedBy: auth.currentUser ? auth.currentUser.uid : null,
+        uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      const existingDoc = docIdEl.value.trim();
+      try {
+        if (existingDoc) {
+          await db.collection('results').doc(existingDoc).set(payload, { merge: true });
+          saveMessage.textContent = 'Result updated (doc: ' + existingDoc + ')';
+        } else {
+          const docRef = await db.collection('results').add(payload);
+          saveMessage.textContent = 'Result saved (doc: ' + docRef.id + ')';
+          docIdEl.value = docRef.id;
+        }
+        // clear some fields if you like
+      } catch (err) {
+        saveMessage.textContent = 'Save error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
