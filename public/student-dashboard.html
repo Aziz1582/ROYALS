@@ -28,16 +28,47 @@
     #pdfList a:hover {
       color: #42966e;
     }
+    /* Style the sign out button */
+    #signOutBtn {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: 'Arimo', sans-serif;
+      border-radius: 4px;
+      float: right;
+      margin-top: 12px;
+    }
+    #signOutBtn:hover {
+      background-color: #c0392b;
+    }
+    /* Results table styling */
+    #results table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1em;
+    }
+    #results th, #results td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    #results thead {
+      background-color: #f2f2f2;
+    }
   </style>
 </head>
 <body>
 
-<header id="top">
+<header id="top" style="position: relative;">
   <h1 class="logo">Student Dashboard</h1>
+  <!-- Sign Out button -->
+  <button id="signOutBtn" title="Sign Out">Sign Out</button>
   <nav>
     <ul>
       <li class="dropdown">
-        <button class="dropbtn">Menu ▼</button>
         <div class="dropdown-content">
           <a href="#tests-exams">Tests/Exams</a>
           <a href="#results">Results</a>
@@ -69,36 +100,13 @@
     <iframe id="pdfViewer" src="" frameborder="0"></iframe>
   </section>
 
-  <!-- ... rest of your sections unchanged ... -->
-
   <section id="results">
     <h2>Results</h2>
-    <p>Below are your results for the tests taken. Results are updated by your tutor after marking.</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Test Name</th>
-          <th>Date Taken</th>
-          <th>Score</th>
-          <th>Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Placeholder rows -->
-        <tr>
-          <td>Math Test</td>
-          <td>2025-07-15</td>
-          <td>85%</td>
-          <td>Good job! Keep practicing.</td>
-        </tr>
-        <tr>
-          <td>English Test</td>
-          <td>2025-07-20</td>
-          <td>90%</td>
-          <td>Excellent work.</td>
-        </tr>
-      </tbody>
-    </table>
+    <p>Your latest test results updated by your tutor.</p>
+    <div id="resultsContainer">
+      <!-- Dynamic results table will appear here -->
+      <p>Loading results...</p>
+    </div>
   </section>
 
   <section id="class-schedule">
@@ -152,23 +160,46 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
-<script src="student-dashboard.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <script>
-  // PDFs for each subject
+  // Initialize Firebase app
+  const firebaseConfig = {
+    apiKey: "AIzaSyCYyyJcBgHf7Qq0YQLCfWXPHC0UqeoNc2U",
+    authDomain: "royals-f5351.firebaseapp.com",
+    projectId: "royals-f5351",
+    storageBucket: "royals-f5351.firebasestorage.app",
+    messagingSenderId: "564934364429",
+    appId: "1:564934364429:web:4a84ab9a6dfc3eb34cf444",
+    measurementId: "G-5X0NFVXY7D"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Sign Out button logic
+  document.getElementById('signOutBtn').addEventListener('click', () => {
+    auth.signOut()
+      .then(() => {
+        // Redirect to homepage after sign out
+        window.location.href = 'index.html';
+      })
+      .catch(error => {
+        alert('Error signing out: ' + error.message);
+      });
+  });
+
+  // PDFs for each subject, all PDFs directly inside subject folders (no subfolders)
   const pdfData = {
     Maths: [
-      { name: "Math Test 1", file: "tests/Maths/math_test_1.pdf" },
-      { name: "Math Test 2", file: "tests/Maths/math_test_2.pdf" }
+      { name: "Maths", file: "https://firebasestorage.googleapis.com/v0/b/royals-f5351.firebasestorage.app/o/Maths%2FDs2002p3.pdf?alt=media&token=de5c3022-0cd7-47e3-8096-86dcd2bf4ed8" }
     ],
     ScienceDoubleAward: [
-      { name: "Science DA Test 1", file: "tests/ScienceDoubleAward/science_da_test_1.pdf" },
-      { name: "Science DA Test 2", file: "tests/ScienceDoubleAward/science_da_test_2.pdf" }
+      { name: "ScienceDoubleAward", file: "https://firebasestorage.googleapis.com/v0/b/royals-f5351.firebasestorage.app/o/ScienceDoubleAward%2FDS2000p4.pdf?alt=media&token=3dfd6907-bcb3-4eb9-950c-78bc948afe26" },
     ],
     Languages: [
       { name: "English Test 1", file: "tests/Languages/english_test_1.pdf" },
-      { name: "French Test 1", file: "tests/Languages/french_test_1.pdf" }
+      { name: "Setswana", file: "tests/Languages/french_test_1.pdf" }
     ],
     Geography: [
       { name: "Geography Test 1", file: "tests/Geography/geography_test_1.pdf" }
@@ -205,6 +236,71 @@
       });
     }
   });
+
+  // Dynamic Results Section - load student's results from Firestore
+  const resultsContainer = document.getElementById('resultsContainer');
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loadResults(user.email);
+    } else {
+      resultsContainer.innerHTML = '<p>Please sign in to view your results.</p>';
+    }
+  });
+
+  async function loadResults(userEmail) {
+    resultsContainer.innerHTML = 'Loading results...';
+
+    try {
+      // Query all results for this student ordered by dateUploaded descending
+      const snapshot = await db.collection('studentResults')
+        .where('email', '==', userEmail)
+        .orderBy('dateUploaded', 'desc')
+        .get();
+
+      if (snapshot.empty) {
+        resultsContainer.innerHTML = '<p>No results found yet.</p>';
+        return;
+      }
+
+      // Build results table HTML
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Test Name</th>
+              <th>Date Taken</th>
+              <th>Score</th>
+              <th>Remarks</th>
+              <th>Result File</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      snapshot.forEach(doc => {
+        const r = doc.data();
+        html += `
+          <tr>
+            <td>${r.testName}</td>
+            <td>${r.dateUploaded}</td>
+            <td>${r.score ? r.score + '%' : 'N/A'}</td>
+            <td>${r.remarks || '-'}</td>
+            <td><a href="${r.fileURL}" target="_blank" rel="noopener">View File</a></td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+      `;
+      resultsContainer.innerHTML = html;
+
+    } catch (error) {
+      resultsContainer.innerHTML = `<p>Error loading results: ${error.message}</p>`;
+    }
+  }
 </script>
 
 </body>

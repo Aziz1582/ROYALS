@@ -90,21 +90,21 @@
       <ul class="services-list">
         <li>
           <div class="image-container">
-            <img src="images/tutor1.jpg" alt="Tutor 1">
+            <img src="wame.jpg" alt="Tutor 1">
           </div>
           <h5>WAME MORENG</h5>
           <p>Mathematics and Language Specialist with 10 years experience in exam prep.</p>
         </li>
         <li>
           <div class="image-container">
-            <img src="images/tutor2.jpg" alt="Tutor 2">
+            <img src="percy.jpg" alt="Tutor 2">
           </div>
           <h5>ALONE P. MANDEDU</h5>
           <p>BSC and Mathematics expert with a passion for hands-on learning.</p>
         </li>
         <li>
           <div class="image-container">
-            <img src="images/tutor3.jpg" alt="Tutor 3">
+            <img src="gee.jpg" alt="Tutor 3">
           </div>
           <h5>GOITSONE JOHANNE</h5>
           <p>BSC coach focusing on scientific research and comprehension.</p>
@@ -114,26 +114,38 @@
     </div>
   </section>
 
-  <!-- Testimonials Section -->
-  <section class="portfolio-section" id="testimonials">
-    <h3>Testimonials</h3>
-    <p class="subtitle">Hear from our students and see their results</p>
-    <ul class="portfolio-list">
-      <li class="item">
-        <img src="images/result1.jpg" alt="Testimonial 1">
-        <p>"Thanks to Chase Tutors, I improved my math grade from C to A!" - Alex</p>
-      </li>
-      <li class="item">
-        <img src="images/result2.jpg" alt="Testimonial 2">
-        <p>"Their teaching style made learning science enjoyable and easy!" - Linda</p>
-      </li>
-      <li class="item">
-        <img src="images/result3.jpg" alt="Testimonial 3">
-        <p>"Best tutors ever! Passed my exams with flying colors." - Kevin</p>
-      </li>
-      <div class="clear"></div>
-    </ul>
-  </section>
+ <section class="portfolio-section" id="testimonials">
+  <h3>Testimonials</h3>
+  <p class="subtitle">Hear from our students and see their results</p>
+
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Previous Grade</th>
+        <th>Royal Saints Grade</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Alex</td>
+        <td>C</td>
+        <td>A</td>
+      </tr>
+      <tr>
+        <td>Linda</td>
+        <td>B</td>
+        <td>A+</td>
+      </tr>
+      <tr>
+        <td>Kevin</td>
+        <td>D</td>
+        <td>B+</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
 
   <!-- Sign In Modal -->
   <div id="signinModal">
@@ -161,18 +173,22 @@
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
 
+      const adminEmail = "alonemandedu@gmail.com";  // <-- REPLACE with your admin email
+
       // Open modal handler
       function openModalHandler() {
         document.getElementById('signinModal').style.display = 'flex';
       }
 
-      // Auth state change listener
+      // Auth state change listener with role redirect
       auth.onAuthStateChanged(user => {
         const signInLink = document.getElementById('openSignIn');
         if (user) {
-          signInLink.textContent = user.displayName || user.email;
-          signInLink.removeEventListener('click', openModalHandler);
-          document.getElementById('signOutItem').style.display = 'inline-block';
+          if (user.email === adminEmail) {
+            window.location.href = "admin-dashboard.html";
+          } else {
+            window.location.href = "student-dashboard.html";
+          }
         } else {
           signInLink.textContent = 'Sign In';
           signInLink.addEventListener('click', openModalHandler);
@@ -209,7 +225,6 @@
             msg.textContent = 'Signed in successfully! Redirecting...';
             setTimeout(() => {
               document.getElementById('signinModal').style.display = 'none';
-              window.location.href = "student-dashboard.html";
             }, 1000);
           })
           .catch(error => {
